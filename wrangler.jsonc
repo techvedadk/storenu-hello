@@ -10,6 +10,9 @@
 	"observability": {
 		"enabled": true
 	},
+	"vars": {
+		"ALLOWED_ORIGINS": "https://storenu.com, http://localhost:4321"
+	},
 	"kv_namespaces": [
 		{
 		"binding": "USER_NOTIFICATION",
