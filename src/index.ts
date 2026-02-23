@@ -67,13 +67,14 @@ function validateFormData(data: Partial<FormBody>): string | null {
   return null;
 }
 
-async function send_email ( env:Env, data: FormSubmission) {
-   await env.cf_worker_email.send({
-        to: 'shrihari.p4@gmail.com',
-        subject: 'KV Write Triggered',
-        body: `Data written: ${JSON.stringify(data)}`
-      });
-    }
+async function send_email(env: Env, data: FormSubmission) {
+  await env.cf_worker_email.send({
+    from: 'shrihari.p4@gmail.com',
+    to: 'shrihari.p4@gmail.com',
+    subject: 'KV Write Triggered',
+    body: `Data written: ${JSON.stringify(data)}`
+  });
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
