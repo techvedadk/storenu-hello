@@ -1,7 +1,10 @@
+
 export interface Env {
   USER_NOTIFICATION: KVNamespace;
   TURNSTILE_SECRET_KEY: string;
   ALLOWED_ORIGINS: string; // comma-separated
+  cf_worker_email: EmailSender;
+  SEND_TO_EMAIL?: string;
 }
 
 // The raw incoming body (everything optional since we validate manually)
@@ -20,6 +23,16 @@ interface FormSubmission {
   phone?: string;
   message?: string;
 }
+
+
+interface EmailSender {
+  send(options: {
+    to: string;
+    subject: string;
+    body: string;
+  }): Promise<Response>;
+}
+
 
 async function verifyTurnstile(token: string, secretKey: string, ip: string): Promise<boolean> {
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -62,6 +75,14 @@ function validateFormData(data: Partial<FormBody>): string | null {
   if (!isValidEmail(data.email)) return "Invalid email format.";
   return null;
 }
+
+async function send_email ( env:Env, data: Record<string, string>) {
+   await env.cf_worker_email.send({
+        to: 'shrihari.p4@gmail.com',
+        subject: 'KV Write Triggered',
+        body: `Data written: ${JSON.stringify(data)}`
+      });
+    }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

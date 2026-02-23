@@ -13,6 +13,12 @@
 	"vars": {
 		"ALLOWED_ORIGINS": "https://storenu.com, http://localhost:4321"
 	},
+	"send_email": [
+    {
+      "name": "cf_worker_email",
+      "destination_address": "shrihari.p4@gmail.com"
+    }
+  ],
 	"kv_namespaces": [
 		{
 		"binding": "USER_NOTIFICATION",
