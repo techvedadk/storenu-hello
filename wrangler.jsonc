@@ -7,6 +7,7 @@
 	"name": "storenu-hello",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-03-27",
+	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true
 	},
@@ -14,14 +15,14 @@
 		"ALLOWED_ORIGINS": "https://storenu.com, http://localhost:4321"
 	},
 	"send_email": [
-    {
-      "name": "cf_worker_email"
-    }
-  ],
+		{
+			"name": "cf_worker_email"
+		}
+	],
 	"kv_namespaces": [
 		{
-		"binding": "USER_NOTIFICATION",
-		"id": "8d64848b9c1c43cebc30e645034e0540"
+			"binding": "USER_NOTIFICATION",
+			"id": "8d64848b9c1c43cebc30e645034e0540"
 		}
 	]
 }
