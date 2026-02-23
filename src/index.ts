@@ -1,3 +1,6 @@
+import { EmailMessage } from "cloudflare:email";
+import { createMimeMessage } from "mimetext";
+
 
 export interface Env {
   USER_NOTIFICATION: KVNamespace;
@@ -67,13 +70,25 @@ function validateFormData(data: Partial<FormBody>): string | null {
   return null;
 }
 
-async function send_email(env: Env, data: FormSubmission) {
-  await env.cf_worker_email.send({
-    from: 'shrihari.p4@gmail.com',
-    to: 'shrihari.p4@gmail.com',
-    subject: 'KV Write Triggered',
-    body: `Data written: ${JSON.stringify(data)}`
+async function send_email(
+  env: Env,
+  data: FormSubmission
+): Promise<void> {
+
+
+  const msg = createMimeMessage();
+
+  msg.setSender({ name: "StorenUKV", addr: 'shrihari.p4@gmail.com' });
+  msg.setRecipient('shrihari.p4@gmail.com');
+  msg.setSubject("KV Write Triggered");
+  msg.addMessage({
+    contentType: "text/plain",
+    data: `Data written: ${JSON.stringify(data)}`,
   });
+
+  const emailMessage = new EmailMessage('shrihari.p4@gmail.com', 'shrihari.p4@gmail.com', msg.asRaw());
+
+  await env.cf_worker_email.send(emailMessage);
 }
 
 export default {
