@@ -15,8 +15,7 @@
 	},
 	"send_email": [
     {
-      "name": "cf_worker_email",
-      "destination_address": "shrihari.p4@gmail.com"
+      "name": "cf_worker_email"
     }
   ],
 	"kv_namespaces": [
