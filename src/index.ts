@@ -3,7 +3,7 @@ export interface Env {
   USER_NOTIFICATION: KVNamespace;
   TURNSTILE_SECRET_KEY: string;
   ALLOWED_ORIGINS: string; // comma-separated
-  cf_worker_email: EmailSender;
+  cf_worker_email: any;
   SEND_TO_EMAIL?: string;
 }
 
@@ -22,15 +22,6 @@ interface FormSubmission {
   email: string;
   phone?: string;
   message?: string;
-}
-
-
-interface EmailSender {
-  send(options: {
-    to: string;
-    subject: string;
-    body: string;
-  }): Promise<Response>;
 }
 
 
