@@ -12,7 +12,8 @@
 		"enabled": true
 	},
 	"vars": {
-		"ALLOWED_ORIGINS": "https://storenu.com, https://www.storenu.com, http://localhost:4321"
+		"ALLOWED_ORIGINS": "https://storenu.com, https://www.storenu.com, http://localhost:4321",
+		"TECHCOMMERCE_API_URL": "https://api.techcommerce.eu"
 	},
 	"send_email": [
 		{

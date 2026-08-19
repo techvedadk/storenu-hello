@@ -8,6 +8,8 @@ export interface Env {
 	ALLOWED_ORIGINS: string; // comma-separated
 	cf_worker_email: any;
 	SEND_TO_EMAIL?: string;
+	TECHCOMMERCE_API_URL: string;
+	PAYMENT_ONBOARDING_INTERNAL_SECRET: string;
 }
 
 // The raw incoming body (everything optional since we validate manually)
@@ -25,6 +27,13 @@ interface FormSubmission {
 	email: string;
 	phone?: string;
 	message?: string;
+}
+
+interface OnboardingResult {
+	storeId: string;
+	accountReference: string;
+	onboardingUrl: string;
+	expiresAt?: string;
 }
 
 
@@ -72,23 +81,67 @@ function validateFormData(data: Partial<FormBody>): string | null {
 
 async function send_email(
 	env: Env,
-	data: FormSubmission
+	data: FormSubmission,
+	onboarding: OnboardingResult,
 ): Promise<void> {
 
 
 	const msg = createMimeMessage();
 
 	msg.setSender({ name: "StoreNuKV", addr: 'me@shriharip.com' });
-	msg.setRecipient('shrihari.p4@gmail.com');
-	msg.setSubject("KV Write Triggered");
+	msg.setRecipient(env.SEND_TO_EMAIL ?? 'shrihari.p4@gmail.com');
+	msg.setSubject("New Store Claim - Stripe onboarding ready");
 	msg.addMessage({
 		contentType: "text/plain",
-		data: `Data written: ${JSON.stringify(data)}`,
+		data: [
+			`Lead: ${JSON.stringify(data)}`,
+			`Store ID: ${onboarding.storeId}`,
+			`Stripe account ID: ${onboarding.accountReference}`,
+			`Onboarding link: ${onboarding.onboardingUrl}`,
+		].join("\n"),
 	});
 
 	const emailMessage = new EmailMessage('me@shriharip.com', 'shrihari.p4@gmail.com', msg.asRaw());
 
 	await env.cf_worker_email.send(emailMessage);
+}
+
+async function startPaymentOnboarding(
+	env: Env,
+	data: FormSubmission,
+): Promise<OnboardingResult> {
+	const response = await fetch(
+		`${env.TECHCOMMERCE_API_URL}/internal/payment-onboarding/start`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-internal-secret": env.PAYMENT_ONBOARDING_INTERNAL_SECRET,
+			},
+			body: JSON.stringify({
+				...data,
+				country: "DK",
+				currency: "DKK",
+			}),
+		},
+	);
+	const result = (await response.json()) as {
+		ok?: boolean;
+		storeId?: string;
+		accountReference?: string;
+		onboardingUrl?: string;
+		expiresAt?: string;
+		error?: string;
+	};
+	if (!response.ok || !result.ok || !result.storeId || !result.accountReference || !result.onboardingUrl) {
+		throw new Error(result.error ?? "Payment onboarding could not be started");
+	}
+	return {
+		storeId: result.storeId,
+		accountReference: result.accountReference,
+		onboardingUrl: result.onboardingUrl,
+		expiresAt: result.expiresAt,
+	};
 }
 
 export default {
@@ -169,10 +222,11 @@ export default {
 				const key = `submission:${submission.email}`;
 				await env.USER_NOTIFICATION.put(key, JSON.stringify(submission));
 
-				await send_email(env, submission)
+				const onboarding = await startPaymentOnboarding(env, submission);
+				await send_email(env, submission, onboarding);
 
 				return new Response(
-					JSON.stringify({ success: true, message: "Submission saved.", key }),
+					JSON.stringify({ success: true, message: "Submission saved.", key, onboarding }),
 					{
 						status: 201,
 						headers: { "Content-Type": "application/json", ...corsHeaders(allowedOrigin) },
