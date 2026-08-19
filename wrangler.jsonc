@@ -12,7 +12,7 @@
 		"enabled": true
 	},
 	"vars": {
-		"ALLOWED_ORIGINS": "https://storenu.com, http://localhost:4321"
+		"ALLOWED_ORIGINS": "https://storenu.com, https://www.storenu.com, http://localhost:4321"
 	},
 	"send_email": [
 		{
