@@ -1,5 +1,9 @@
 import { EmailMessage } from "cloudflare:email";
 import { createMimeMessage } from "mimetext";
+import {
+	parseTrialProvisioningResponse,
+	type TrialProvisioningResult,
+} from "./trial-provisioning";
 
 
 export interface Env {
@@ -28,14 +32,6 @@ interface FormSubmission {
 	phone?: string;
 	message?: string;
 }
-
-interface OnboardingResult {
-	storeId: string;
-	accountReference: string;
-	onboardingUrl: string;
-	expiresAt?: string;
-}
-
 
 async function verifyTurnstile(token: string, secretKey: string, ip: string): Promise<boolean> {
 	const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -82,7 +78,7 @@ function validateFormData(data: Partial<FormBody>): string | null {
 async function send_email(
 	env: Env,
 	data: FormSubmission,
-	onboarding: OnboardingResult,
+	provisioning: TrialProvisioningResult,
 ): Promise<void> {
 
 
@@ -90,14 +86,13 @@ async function send_email(
 
 	msg.setSender({ name: "StoreNuKV", addr: 'me@shriharip.com' });
 	msg.setRecipient(env.SEND_TO_EMAIL ?? 'shrihari.p4@gmail.com');
-	msg.setSubject("New Store Claim - Stripe onboarding ready");
+	msg.setSubject("New Store Claim - Trial store ready");
 	msg.addMessage({
 		contentType: "text/plain",
 		data: [
 			`Lead: ${JSON.stringify(data)}`,
-			`Store ID: ${onboarding.storeId}`,
-			`Stripe account ID: ${onboarding.accountReference}`,
-			`Onboarding link: ${onboarding.onboardingUrl}`,
+			`Store ID: ${provisioning.storeId}`,
+			`Existing store: ${provisioning.existing ? "yes" : "no"}`,
 		].join("\n"),
 	});
 
@@ -106,10 +101,10 @@ async function send_email(
 	await env.cf_worker_email.send(emailMessage);
 }
 
-async function startPaymentOnboarding(
+async function provisionTrialStore(
 	env: Env,
 	data: FormSubmission,
-): Promise<OnboardingResult> {
+): Promise<TrialProvisioningResult> {
 	const response = await fetch(
 		`${env.TECHCOMMERCE_API_URL}/internal/payment-onboarding/start`,
 		{
@@ -125,23 +120,7 @@ async function startPaymentOnboarding(
 			}),
 		},
 	);
-	const result = (await response.json()) as {
-		ok?: boolean;
-		storeId?: string;
-		accountReference?: string;
-		onboardingUrl?: string;
-		expiresAt?: string;
-		error?: string;
-	};
-	if (!response.ok || !result.ok || !result.storeId || !result.accountReference || !result.onboardingUrl) {
-		throw new Error(result.error ?? "Payment onboarding could not be started");
-	}
-	return {
-		storeId: result.storeId,
-		accountReference: result.accountReference,
-		onboardingUrl: result.onboardingUrl,
-		expiresAt: result.expiresAt,
-	};
+	return parseTrialProvisioningResponse(response);
 }
 
 export default {
@@ -222,11 +201,11 @@ export default {
 				const key = `submission:${submission.email}`;
 				await env.USER_NOTIFICATION.put(key, JSON.stringify(submission));
 
-				const onboarding = await startPaymentOnboarding(env, submission);
-				await send_email(env, submission, onboarding);
+				const provisioning = await provisionTrialStore(env, submission);
+				await send_email(env, submission, provisioning);
 
 				return new Response(
-					JSON.stringify({ success: true, message: "Submission saved.", key, onboarding }),
+					JSON.stringify({ success: true, message: "Submission saved.", key, provisioning }),
 					{
 						status: 201,
 						headers: { "Content-Type": "application/json", ...corsHeaders(allowedOrigin) },
